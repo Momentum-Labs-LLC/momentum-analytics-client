@@ -14,5 +14,5 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm ci
-      - run: npm run build --mode=production
+      - run: npm run build -- --mode=production
       #- run: npm test
