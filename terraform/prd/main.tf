@@ -51,10 +51,13 @@ resource "aws_iam_policy" "this-s3-policy" {
     Statement = [
       {
         Action = [
-          "s3:*",
+          "s3:PutObject",
         ]
         Effect   = "Allow"
-        Resource = data.aws_s3_bucket.this_cdn_bucket.arn
+        Resource = [
+          data.aws_s3_bucket.this_cdn_bucket.arn,
+          "${data.aws_s3_bucket.this_cdn_bucket.arn}/*"
+        ]
       },
     ]
   })
