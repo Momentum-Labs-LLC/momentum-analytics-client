@@ -1,10 +1,16 @@
-name: Build javascript with Node.JS
+name: Build and Deploy
 
-on: [push]
+on: 
+  push:
+    branches:
+      - main
+  
+env:
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_DEFAULT_OUTPUT: json
 
 jobs:
-  build:
-
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,3 +22,11 @@ jobs:
       - run: npm ci
       - run: npm run build -- --mode=production
       #- run: npm test
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          ## the following creates an ARN based on the values entered into github secrets
+          role-to-assume: arn:aws:iam::${{ secrets.PRD_AWS_ACCOUNT_ID }}:role/${{ secrets.PRD_DEPLOY_ROLE }}
+          role-session-name: GithubAction-DeployTrackingClient
+      - run: aws s3 cp public/* s3://${{ secrets.PRD_TRK_CLIENT_BUCKET_NAME }}
