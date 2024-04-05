@@ -1,21 +1,36 @@
-function scriptLoaded (text: string) { 
-    console.log(text);
-} // end function
+import { AnalyticsCookieProvider } from "./AnalyticsCookieProvider";
+import { IAnalyticsApiClientConfiguration } from "./AnalyticsApiClientConfiguration";
+import { AnalyticsApiClientFactory } from "./AnalyticsApiClientFactory";
+import { PageViewReporter } from "./PageViewReporter";
+import { UserIdReporter } from "./UserIdReporter";
+import { FormEmailReporter } from "./EmailReporter";
+import { UrlEmailReporter } from "./EmailReporter";
 
-scriptLoaded("Hello");
-scriptLoaded("Hello 2");
-scriptLoaded("Hello 3");
+document.addEventListener('DOMContentLoaded', async function() {
+    var cookieProvider = new AnalyticsCookieProvider();
+    var analyticsCookie = await cookieProvider.GetAsync();
 
+    var apiClientConfig : IAnalyticsApiClientConfiguration = {
+        baseUrl: "https://jz4fayq8k7.execute-api.us-east-1.amazonaws.com/prd/",
+        //baseUrl: "https://localhost:4000/",
+        pageViewsPath: "v1/page-views",
+        piiPath: "v1/pii"
+    };
 
-function parseJwt (token: string) {
-    var base64Url = token.split('.')[1];
-    var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
+    var clientFactory = new AnalyticsApiClientFactory(apiClientConfig);
+    var apiClient = await clientFactory.BuildAsync();
+    
+    var pageViewReporter = new PageViewReporter(apiClient);
+    // do this now to make sure i have a cookie for other hits
+    await pageViewReporter.ReportAsync(analyticsCookie);
 
-    return JSON.parse(jsonPayload);
-}
+    var userIdReporter = new UserIdReporter(apiClient);
+    var inputEmailReporter = new FormEmailReporter(apiClient);
+    var verifyEmailReporter = new UrlEmailReporter(apiClient); 
 
-var parsedJwt = parseJwt("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjoiMTI4MTAwMyIsInNlc3Npb25faWQiOiJkMGRhb2duNnZucWtmZWcxNmo1MnIwNXMyaCIsImV4cGlyZV9kYXRlIjoxNzA5NzUzMDY0fQ.WI--k2QzgP7BzAm0YzMz8eZT33aM7aQLYlqhcYTbypY");
-scriptLoaded(parsedJwt);
+    await Promise.all([
+        userIdReporter.ReportAsync(analyticsCookie),
+        inputEmailReporter.ReportAsync(analyticsCookie),
+        verifyEmailReporter.ReportAsync(analyticsCookie)
+    ]);
+}); // end method
