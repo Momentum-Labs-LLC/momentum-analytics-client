@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     var analyticsCookie = await cookieProvider.GetAsync();
 
     var apiClientConfig : IAnalyticsApiClientConfiguration = {
-        baseUrl: "https://api.mll-analytics.com",
+        baseUrl: "https://api.mll-analytics.com/",
         //baseUrl: "https://localhost:4000/",
         pageViewsPath: "v1/page-views",
         piiPath: "v1/pii"
