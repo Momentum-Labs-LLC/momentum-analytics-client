@@ -31,7 +31,7 @@ module "iam_github_s3_role" {
   # This should be updated to suit your organization, repository, references/branches, etc.
   subjects = [
     # specific repository
-    "Momentum-Labs-LLC/momentum-tracking-client:*",
+    "Momentum-Labs-LLC/momentum-analytics-client:*",
   ]
 
   policies = {
@@ -42,7 +42,7 @@ module "iam_github_s3_role" {
 }
 
 data "aws_s3_bucket" "this_cdn_bucket" {
-  bucket = "${local.corp}-${local.env}-s3-cdn-0"
+  bucket = "${local.corp}-${local.env}-analytics-cdn-0"
 }
 
 resource "aws_iam_policy" "this-s3-policy" {
@@ -53,7 +53,7 @@ resource "aws_iam_policy" "this-s3-policy" {
         Action = [
           "s3:PutObject",
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           data.aws_s3_bucket.this_cdn_bucket.arn,
           "${data.aws_s3_bucket.this_cdn_bucket.arn}/*"
