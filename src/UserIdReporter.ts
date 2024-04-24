@@ -1,3 +1,5 @@
+import { IAnalyticsApiClient } from "./AnalyticsApiClient";
+import { IAnalyticsCookie } from "./AnalyticsCookieProvider";
 import { IPiiReporter, PiiReporterBase } from "./PiiReporter";
 
 interface IUserIdReporter extends IPiiReporter {
@@ -8,6 +10,23 @@ type JwtToken = { [key: string] : string };
 export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     type = 1;
     pattern = new RegExp("^\\d*$");
+
+    // Override of PiiReporterBase.ShouldGetValueAsync
+    // Always attempt to get the user id.
+    async ShouldGetValueAsync(cookie: IAnalyticsCookie): Promise<boolean> {
+        return true;
+    } // end method
+
+    // Overrid of PiiReporterBase.ShouldReportValueAsync
+    // Only send the user if it isn't the last user id captured for this cookie.
+    async ShouldReportValueAsync(cookie: IAnalyticsCookie, piiValue: string | null): Promise<boolean> {
+        var result = false;
+        if(piiValue && piiValue != cookie.UserId) {
+            result = true;
+        } // end if
+
+        return result;
+    } // end method
 
     async GetPiiValueAsync(): Promise<string | null> {
         var result = null;

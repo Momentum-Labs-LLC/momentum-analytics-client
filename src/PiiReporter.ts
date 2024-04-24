@@ -16,12 +16,36 @@ export abstract class PiiReporterBase implements IPiiReporter {
     }
 
     async ReportAsync(cookie: IAnalyticsCookie): Promise<void> {
-        if((cookie.PiiBitmap & this.type) == 0) {
+        var shouldGetValue = await this.ShouldGetValueAsync(cookie);
+        if(shouldGetValue) {
             var piiValue = await this.GetPiiValueAsync();
-            if(piiValue && this.pattern.test(piiValue)) {
-                await this.analyticsClient.SendPiiAsync({value: piiValue, type: this.type });
+            if(piiValue) {
+                var shouldReport = await this.ShouldReportValueAsync(cookie, piiValue);
+                if(shouldReport) {
+                    await this.analyticsClient.SendPiiAsync({value: piiValue, type: this.type });
+                } // end if
             } // end if
         } // end if
+    } // end method
+
+    async ShouldGetValueAsync(cookie: IAnalyticsCookie) : Promise<boolean> {
+        var result = false;
+        
+        if((cookie.PiiBitmap & this.type) == 0) {
+            result = true;
+        } // end if
+
+        return result;
+    } // end method
+
+    async ShouldReportValueAsync(cookie: IAnalyticsCookie, piiValue: string | null) : Promise<boolean> {
+        var result = false;        
+        
+        if(piiValue && this.pattern.test(piiValue)) {
+            result = true;
+        } // end if
+
+        return result;
     } // end method
 
     abstract GetPiiValueAsync() : Promise<string | null>;

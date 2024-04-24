@@ -3,6 +3,7 @@ export interface IAnalyticsCookie {
     VisitExpiration : number
     PiiBitmap : number
     MaxFunnelStep: number
+    UserId : string | null
 } // end interface
 
 interface IAnalyticsCookieProvider { 
@@ -15,13 +16,15 @@ export class AnalyticsCookieProvider implements IAnalyticsCookieProvider {
     VISIT_EXPIRATION = "vexp";
     PII_BITMAP = "pii";
     MAX_FUNNEL_STEP = "fs";
+    USER_ID = "u";
 
     async GetAsync(): Promise<IAnalyticsCookie> {
         var result : IAnalyticsCookie = { 
             CookieId : null,
             VisitExpiration : 0,
             PiiBitmap : 0,
-            MaxFunnelStep : -1
+            MaxFunnelStep : -1,
+            UserId : null
         };
 
         var cookieValue = this.GetCookie(this.COOKIE_NAME);
@@ -40,7 +43,8 @@ export class AnalyticsCookieProvider implements IAnalyticsCookieProvider {
                 CookieId: cookieDict[this.COOKIE_ID],
                 VisitExpiration : parseInt(cookieDict[this.VISIT_EXPIRATION]),
                 PiiBitmap : parseInt(cookieDict[this.PII_BITMAP]),
-                MaxFunnelStep: parseInt(cookieDict[this.MAX_FUNNEL_STEP])
+                MaxFunnelStep: parseInt(cookieDict[this.MAX_FUNNEL_STEP]),
+                UserId: cookieDict[this.USER_ID]
             };
         } // end if
 
