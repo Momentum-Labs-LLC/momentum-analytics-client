@@ -1,11 +1,13 @@
-import { IAnalyticsApiClient } from "./AnalyticsApiClient";
 import { IAnalyticsCookie } from "./AnalyticsCookieProvider";
 import { IPiiReporter, PiiReporterBase } from "./PiiReporter";
 
 interface IUserIdReporter extends IPiiReporter {
 }
 
-type JwtToken = { [key: string] : string };
+interface IUserIdData { 
+    user_type: number;
+    user_id: string;
+}
 
 export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     type = 1;
@@ -14,7 +16,7 @@ export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     // Override of PiiReporterBase.ShouldGetValueAsync
     // Always attempt to get the user id.
     async ShouldGetValueAsync(cookie: IAnalyticsCookie): Promise<boolean> {
-        return true;
+        return this.IsUserAuthenticated();
     } // end method
 
     // Overrid of PiiReporterBase.ShouldReportValueAsync
@@ -31,19 +33,25 @@ export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     async GetPiiValueAsync(): Promise<string | null> {
         var result = null;
 
-        var searchParams = new URLSearchParams(window.location.search);
-        return searchParams.get("userId");
+        var donorIdEvents = window.adobeDataLayer?.filter((item) => { 
+                var result = false;
 
-        if(this.IsUserAuthenticated()) {
-            if(window.dataLayer) {
+                if (item.event === "dddc") {
+                    var userIdData = item.data as IUserIdData;
+                    if(userIdData?.user_type === 1 && userIdData?.user_id) {
+                        result = true;
+                    } // end if
+                } // end if
+            })
+            .map((dddcEvents => {
+                return dddcEvents.data as IUserIdData;
+            }));
+        
+        if (donorIdEvents && donorIdEvents.length > 0) {
+            result = donorIdEvents[0].user_id;
+        } // end if         
 
-            } else if(window.adobeDataLayer) {
-
-            }
-            // https://www.oneblood.org/content/oneblood/us/en/jcr:content.invita.json?type=GET_USER
-        } // end if        
-
-        return result; 
+        return result;
     } // end method
 
     IsUserAuthenticated() : boolean {
