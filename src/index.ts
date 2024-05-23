@@ -6,7 +6,7 @@ import { UserIdReporter } from "./UserIdReporter";
 import { FormEmailReporter } from "./EmailReporter";
 import { UrlEmailReporter } from "./EmailReporter";
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('load', async function() {
     var cookieProvider = new AnalyticsCookieProvider();
     var analyticsCookie = await cookieProvider.GetAsync();
 
