@@ -16,14 +16,17 @@ export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     // Override of PiiReporterBase.ShouldGetValueAsync
     // Always attempt to get the user id.
     async ShouldGetValueAsync(cookie: IAnalyticsCookie): Promise<boolean> {
-        return this.IsUserAuthenticated();
+        return true;
     } // end method
 
     // Overrid of PiiReporterBase.ShouldReportValueAsync
     // Only send the user if it isn't the last user id captured for this cookie.
     async ShouldReportValueAsync(cookie: IAnalyticsCookie, piiValue: string | null): Promise<boolean> {
+        // Call the base class method first
+        var baseResult = await super.ShouldReportValueAsync(cookie, piiValue);
+        
         var result = false;
-        if(piiValue && piiValue != cookie.UserId) {
+        if(baseResult && piiValue && piiValue != cookie.UserId) {
             result = true;
         } // end if
 
