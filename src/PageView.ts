@@ -3,5 +3,6 @@ interface IPageView {
     utmParameters? : Record<string, string>, // Dictionary<string, string>
     domain : string,
     path : string,
-    funnelStep : number
+    funnelStep : number,
+    otherParameters? : Record<string, string>
 }
