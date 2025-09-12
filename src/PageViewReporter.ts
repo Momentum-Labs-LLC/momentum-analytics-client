@@ -14,13 +14,13 @@ export class PageViewReporter implements IPageViewReporter {
 
     async ReportAsync(cookie: IAnalyticsCookie): Promise<void> {
         var msSinceEpoch = Date.now();
-        var funnelStep = await this.GetFunnelStepAsync();
+        var funnelStep = this.GetFunnelStep();
 
         if(msSinceEpoch >= cookie.VisitExpiration || funnelStep > cookie.MaxFunnelStep) {
             // this is a new visit or this page is deeper in the funnel than has previously been reported
             var pageView : IPageView = {
-                referer : document.referrer,
-                utmParameters : await this.GetUtmParametersAsync(),
+                referer : this.GetReferrer(),
+                utmParameters : this.GetUtmParameters(),
                 domain: window.location.hostname,
                 path: window.location.pathname,
                 funnelStep : funnelStep,                
@@ -30,7 +30,7 @@ export class PageViewReporter implements IPageViewReporter {
         } // end if        
     } // end method
 
-    async GetFunnelStepAsync() : Promise<number> {
+    GetFunnelStep() : number {
         var result = 0;
 
         if(window.location.pathname.indexOf("donate-now") > -1) {
@@ -40,7 +40,7 @@ export class PageViewReporter implements IPageViewReporter {
         return result;
     } // end method
 
-    GetUtmParametersAsync() : Record<string, string> {
+    GetUtmParameters() : Record<string, string> {
         var result : Record<string, string> = {};
 
         var searchParams = new URLSearchParams(window.location.search);
@@ -50,6 +50,17 @@ export class PageViewReporter implements IPageViewReporter {
                 result[key] = value;
             } // end if
         });
+
+        return result;
+    } // end method
+
+    GetReferrer() : string | null {
+        var result = null;
+
+        var referrer = document.referrer;
+        if(referrer && referrer.indexOf(window.location.hostname) === -1) {
+            result = new URL(referrer).host;
+        } // end if
 
         return result;
     } // end method

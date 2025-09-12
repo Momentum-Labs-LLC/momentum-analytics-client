@@ -5,6 +5,7 @@ import { IAnalyticsCookie } from '../AnalyticsCookieProvider';
 // Mock the analytics client
 const mockAnalyticsClient: jest.Mocked<IAnalyticsApiClient> = {
   SendPageViewAsync: jest.fn().mockResolvedValue(undefined),
+  SendPageViewV2Async: jest.fn().mockResolvedValue(undefined),
   SendPiiAsync: jest.fn().mockResolvedValue(undefined),
 };
 
@@ -44,9 +45,13 @@ describe('PageViewReporter', () => {
     // Create fresh instance
     pageViewReporter = new PageViewReporter(mockAnalyticsClient);
     
-    // Default mock cookie
+    // Default mock cookie - set up for new visit scenario
     mockCookie = {
-      // Add any required cookie properties here
+      CookieId: 'test-cookie-id',
+      VisitExpiration: 0, // Expired, so this will be treated as new visit
+      PiiBitmap: 0,
+      MaxFunnelStep: -1,
+      UserId: 'test-user-id'
     } as IAnalyticsCookie;
 
     // Default window setup
@@ -70,7 +75,6 @@ describe('PageViewReporter', () => {
         utmParameters: {},
         domain: 'test.com',
         path: '/home',
-        otherParameters: {},
         funnelStep: 0,
       });
     });
@@ -107,9 +111,6 @@ describe('PageViewReporter', () => {
             utm_medium: 'cpc',
             utm_campaign: 'test',
           },
-          otherParameters: {
-            other_param: 'value',
-          },
         })
       );
     });
@@ -142,6 +143,86 @@ describe('PageViewReporter', () => {
           funnelStep: 0,
         })
       );
+    });
+
+    it('should report when visit has expired (new visit)', async () => {
+      // Cookie with expired visit
+      const expiredCookie = {
+        CookieId: 'test-cookie-id',
+        VisitExpiration: Date.now() - 1000, // Expired 1 second ago
+        PiiBitmap: 0,
+        MaxFunnelStep: 0,
+        UserId: 'test-user-id'
+      } as IAnalyticsCookie;
+
+      setupWindowLocation({
+        hostname: 'test.com',
+        pathname: '/page',
+      });
+
+      await pageViewReporter.ReportAsync(expiredCookie);
+
+      expect(mockAnalyticsClient.SendPageViewAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('should report when funnel step is deeper than max recorded', async () => {
+      // Cookie with current visit but lower max funnel step
+      const currentCookie = {
+        CookieId: 'test-cookie-id',
+        VisitExpiration: Date.now() + 10000, // Valid for 10 seconds
+        PiiBitmap: 0,
+        MaxFunnelStep: 0, // Previously only seen step 0
+        UserId: 'test-user-id'
+      } as IAnalyticsCookie;
+
+      setupWindowLocation({
+        hostname: 'test.com',
+        pathname: '/donate-now', // This is funnel step 1
+      });
+
+      await pageViewReporter.ReportAsync(currentCookie);
+
+      expect(mockAnalyticsClient.SendPageViewAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT report when visit is current and funnel step is not deeper', async () => {
+      // Cookie with current visit and same or higher max funnel step
+      const currentCookie = {
+        CookieId: 'test-cookie-id',
+        VisitExpiration: Date.now() + 10000, // Valid for 10 seconds
+        PiiBitmap: 0,
+        MaxFunnelStep: 1, // Already seen step 1
+        UserId: 'test-user-id'
+      } as IAnalyticsCookie;
+
+      setupWindowLocation({
+        hostname: 'test.com',
+        pathname: '/donate-now', // This is funnel step 1
+      });
+
+      await pageViewReporter.ReportAsync(currentCookie);
+
+      expect(mockAnalyticsClient.SendPageViewAsync).not.toHaveBeenCalled();
+    });
+
+    it('should NOT report when visit is current and on same funnel step', async () => {
+      // Cookie with current visit and same max funnel step
+      const currentCookie = {
+        CookieId: 'test-cookie-id',
+        VisitExpiration: Date.now() + 10000, // Valid for 10 seconds
+        PiiBitmap: 0,
+        MaxFunnelStep: 0, // Already seen step 0
+        UserId: 'test-user-id'
+      } as IAnalyticsCookie;
+
+      setupWindowLocation({
+        hostname: 'test.com',
+        pathname: '/home', // This is funnel step 0
+      });
+
+      await pageViewReporter.ReportAsync(currentCookie);
+
+      expect(mockAnalyticsClient.SendPageViewAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -194,9 +275,6 @@ describe('PageViewReporter', () => {
       expect(mockAnalyticsClient.SendPageViewAsync).toHaveBeenCalledWith(
         expect.objectContaining({
           path: '/page', // Hash should NOT be included
-          otherParameters: {
-            param: 'value',
-          },
         })
       );
     });
@@ -313,34 +391,29 @@ describe('PageViewReporter', () => {
     });
   });
 
-  describe('ParseQueryString', () => {
+  describe('GetUtmParameters', () => {
     it('should parse UTM parameters correctly', () => {
       setupWindowLocation({
         search: '?utm_source=google&utm_medium=cpc&utm_campaign=test',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({
+      expect(result).toEqual({
         utm_source: 'google',
         utm_medium: 'cpc',
         utm_campaign: 'test',
       });
-      expect(result.otherParameters).toEqual({});
     });
 
-    it('should parse non-UTM parameters correctly', () => {
+    it('should ignore non-UTM parameters', () => {
       setupWindowLocation({
         search: '?param1=value1&param2=value2',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({});
-      expect(result.otherParameters).toEqual({
-        param1: 'value1',
-        param2: 'value2',
-      });
+      expect(result).toEqual({});
     });
 
     it('should handle mixed UTM and non-UTM parameters', () => {
@@ -348,14 +421,11 @@ describe('PageViewReporter', () => {
         search: '?utm_source=google&other_param=value&utm_campaign=test',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({
+      expect(result).toEqual({
         utm_source: 'google',
         utm_campaign: 'test',
-      });
-      expect(result.otherParameters).toEqual({
-        other_param: 'value',
       });
     });
 
@@ -364,10 +434,9 @@ describe('PageViewReporter', () => {
         search: '',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({});
-      expect(result.otherParameters).toEqual({});
+      expect(result).toEqual({});
     });
 
     it('should handle query string with no parameters', () => {
@@ -375,10 +444,9 @@ describe('PageViewReporter', () => {
         search: '?',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({});
-      expect(result.otherParameters).toEqual({});
+      expect(result).toEqual({});
     });
 
     it('should handle URL encoded parameters', () => {
@@ -386,13 +454,10 @@ describe('PageViewReporter', () => {
         search: '?utm_source=google%20ads&param=value%20with%20spaces',
       });
 
-      const result = pageViewReporter.ParseQueryString();
+      const result = pageViewReporter.GetUtmParameters();
 
-      expect(result.utmParameters).toEqual({
+      expect(result).toEqual({
         utm_source: 'google ads',
-      });
-      expect(result.otherParameters).toEqual({
-        param: 'value with spaces',
       });
     });
   });
