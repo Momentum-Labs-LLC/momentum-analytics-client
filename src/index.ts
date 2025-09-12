@@ -1,18 +1,18 @@
 import { AnalyticsCookieProvider } from "./AnalyticsCookieProvider";
 import { IAnalyticsApiClientConfiguration } from "./AnalyticsApiClientConfiguration";
 import { AnalyticsApiClientFactory } from "./AnalyticsApiClientFactory";
-import { PageViewReporter } from "./PageViewReporter";
 import { UserIdReporter } from "./UserIdReporter";
 import { FormEmailReporter } from "./EmailReporter";
 import { UrlEmailReporter } from "./EmailReporter";
+import { PageViewV2Reporter } from "./PageViewV2Reporter";
 
 document.addEventListener('load', async function() {
     var cookieProvider = new AnalyticsCookieProvider();
     var analyticsCookie = await cookieProvider.GetAsync();
 
     var apiClientConfig : IAnalyticsApiClientConfiguration = {
-        baseUrl: "https://api.mll-analytics.com/",        
-        //baseUrl: "https://localhost:4000/",
+        baseUrl: "https://api.mll-analytics.com/",
+        //baseUrl: "https://localhost:4000/"
         pageViewsPath: "v2/page-views",
         piiPath: "v1/pii"
     };
@@ -20,7 +20,7 @@ document.addEventListener('load', async function() {
     var clientFactory = new AnalyticsApiClientFactory(apiClientConfig);
     var apiClient = await clientFactory.BuildAsync();
     
-    var pageViewReporter = new PageViewReporter(apiClient);
+    var pageViewReporter = new PageViewV2Reporter(apiClient);
     // do this now to make sure i have a cookie for other hits
     await pageViewReporter.ReportAsync(analyticsCookie);
 
