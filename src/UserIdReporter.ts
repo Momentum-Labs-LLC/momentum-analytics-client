@@ -12,18 +12,32 @@ interface IUserIdData {
 export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
     type = 1;
     pattern = new RegExp("^\\d*$");
+    checkIntervalMs = 300;
+    checkInterval: NodeJS.Timeout | null = null;
 
-    // Override of PiiReporterBase.ShouldGetValueAsync
-    // Always attempt to get the user id.
-    async ShouldGetValueAsync(cookie: IAnalyticsCookie): Promise<boolean> {
-        return true;
+    async AttemptReportAsync(cookie: IAnalyticsCookie) : Promise<void> {
+        var piiValue = this.GetPiiValue();
+        if(piiValue) {
+            // Stop the interval so this method will not keep being called
+            this.checkInterval = null;
+            var shouldReport = this.ShouldReportValue(cookie, piiValue);
+            if(shouldReport) {
+                await this.analyticsClient.SendPiiAsync({value: piiValue, type: this.type });
+            } // end if
+        } // end if
+    } // end method
+
+    // Override of PiiReporterBase.ReportAsync
+    async ReportAsync(cookie: IAnalyticsCookie): Promise<void> {
+        // start the interval to attempt to report the user id
+        this.checkInterval = setInterval(async () => await this.AttemptReportAsync(cookie), this.checkIntervalMs);
     } // end method
 
     // Overrid of PiiReporterBase.ShouldReportValueAsync
     // Only send the user if it isn't the last user id captured for this cookie.
-    async ShouldReportValueAsync(cookie: IAnalyticsCookie, piiValue: string | null): Promise<boolean> {
+    ShouldReportValue(cookie: IAnalyticsCookie, piiValue: string | null): boolean {
         // Call the base class method first
-        var baseResult = await super.ShouldReportValueAsync(cookie, piiValue);
+        var baseResult = super.ShouldReportValue(cookie, piiValue);
         
         var result = false;
         if(baseResult && piiValue && piiValue != cookie.UserId) {
@@ -33,7 +47,7 @@ export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
         return result;
     } // end method
 
-    async GetPiiValueAsync(): Promise<string | null> {
+    GetPiiValue(): string | null {
         var result = null;
 
         var donorIdEvents = window.adobeDataLayer?.filter((item) => { 
@@ -53,18 +67,6 @@ export class UserIdReporter extends PiiReporterBase implements IUserIdReporter {
         if (donorIdEvents && donorIdEvents.length > 0) {
             result = donorIdEvents[0].user_id;
         } // end if         
-
-        return result;
-    } // end method
-
-    IsUserAuthenticated() : boolean {
-        var result = false;
-        
-        var authenticatedElements = document.getElementsByClassName("authenticated");
-
-        if(authenticatedElements.length > 0) {
-            result = true;
-        } // end if
 
         return result;
     } // end method

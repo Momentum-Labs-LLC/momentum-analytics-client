@@ -16,11 +16,11 @@ export abstract class PiiReporterBase implements IPiiReporter {
     }
 
     async ReportAsync(cookie: IAnalyticsCookie): Promise<void> {
-        var shouldGetValue = await this.ShouldGetValueAsync(cookie);
+        var shouldGetValue = this.ShouldGetValue(cookie);
         if(shouldGetValue) {
-            var piiValue = await this.GetPiiValueAsync();
+            var piiValue = this.GetPiiValue();
             if(piiValue) {
-                var shouldReport = await this.ShouldReportValueAsync(cookie, piiValue);
+                var shouldReport = this.ShouldReportValue(cookie, piiValue);
                 if(shouldReport) {
                     await this.analyticsClient.SendPiiAsync({value: piiValue, type: this.type });
                 } // end if
@@ -28,7 +28,7 @@ export abstract class PiiReporterBase implements IPiiReporter {
         } // end if
     } // end method
 
-    async ShouldGetValueAsync(cookie: IAnalyticsCookie) : Promise<boolean> {
+    ShouldGetValue(cookie: IAnalyticsCookie) : boolean {
         var result = false;
         
         if((cookie.PiiBitmap & this.type) == 0) {
@@ -38,7 +38,7 @@ export abstract class PiiReporterBase implements IPiiReporter {
         return result;
     } // end method
 
-    async ShouldReportValueAsync(cookie: IAnalyticsCookie, piiValue: string | null) : Promise<boolean> {
+    ShouldReportValue(cookie: IAnalyticsCookie, piiValue: string | null) : boolean {
         var result = false;        
         
         if(piiValue && this.pattern.test(piiValue)) {
@@ -48,5 +48,5 @@ export abstract class PiiReporterBase implements IPiiReporter {
         return result;
     } // end method
 
-    abstract GetPiiValueAsync() : Promise<string | null>;
+    abstract GetPiiValue() : string | null;
 } // end method

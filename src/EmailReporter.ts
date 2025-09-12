@@ -15,7 +15,7 @@ export class FormEmailReporter extends EmailReporterBase implements IFormEmailRe
 
     private capturedEmails: string[] = [];
 
-    GetPiiValueAsync(): Promise<string | null> {
+    GetPiiValue(): string | null {
         throw new Error("Method not implemented.");
     }
 
@@ -25,16 +25,16 @@ export class FormEmailReporter extends EmailReporterBase implements IFormEmailRe
 
             if(emailInputs.length > 0) {
                 emailInputs.forEach(emailInput => {
-                    emailInput.addEventListener("blur", async (ev) => await this.HandleBlurEvent(emailInput, ev));
+                    emailInput.addEventListener("blur", async (ev) => await this.HandleBlurEventAsync(emailInput, ev));
                 }) // end foreach
             } // end if
         } // end if
     } // end method
 
-    async HandleBlurEvent(inputElement: HTMLInputElement, ev: FocusEvent) : Promise<void> {
+    async HandleBlurEventAsync(inputElement: HTMLInputElement, ev: FocusEvent) : Promise<void> {
         if(inputElement.value 
-            && this.pattern.test(inputElement.value)
-            && this.capturedEmails.indexOf(inputElement.value) === -1) {
+            && this.pattern.test(inputElement.value) // test the value against the pattern
+            && this.capturedEmails.indexOf(inputElement.value) === -1) { // check if the value has already been captured
             
             // save this particular value as a captured value
             this.capturedEmails.push(inputElement.value);
@@ -48,7 +48,7 @@ export class FormEmailReporter extends EmailReporterBase implements IFormEmailRe
 interface IUrlEmailReporter extends IEmailReporter {} // end interface
 
 export class UrlEmailReporter extends EmailReporterBase implements IUrlEmailReporter {
-    async GetPiiValueAsync(): Promise<string | null> {
+    GetPiiValue(): string | null {
         var searchParams = new URLSearchParams(window.location.search);
         var usernameValue = searchParams.get("username");
 
