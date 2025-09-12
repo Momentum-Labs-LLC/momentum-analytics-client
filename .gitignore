@@ -74,3 +74,8 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ignore package-lock.json
+package-lock.json
+
+public/bundle.js

@@ -2,6 +2,7 @@ import { IAnalyticsApiClientConfiguration } from "./AnalyticsApiClientConfigurat
 
 export interface IAnalyticsApiClient {
     SendPageViewAsync(pageView: IPageView) : Promise<void>
+    SendPageViewV2Async(pageView: IPageViewV2) : Promise<void>
     SendPiiAsync(pii: IPii) : Promise<void>
 }
 
@@ -13,6 +14,9 @@ export abstract class AnalyticsApiClientBase implements IAnalyticsApiClient {
     }
 
     async SendPageViewAsync(pageView: IPageView): Promise<void> {
+        await this.SendDataAsync(this.apiConfiguration.baseUrl + this.apiConfiguration.pageViewsPath, pageView);
+    } // end method
+    async SendPageViewV2Async(pageView: IPageViewV2): Promise<void> {
         await this.SendDataAsync(this.apiConfiguration.baseUrl + this.apiConfiguration.pageViewsPath, pageView);
     } // end method
     async SendPiiAsync(pii: IPii): Promise<void> {

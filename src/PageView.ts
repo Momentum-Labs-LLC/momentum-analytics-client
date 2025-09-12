@@ -4,5 +4,9 @@ interface IPageView {
     domain : string,
     path : string,
     funnelStep : number,
-    otherParameters? : Record<string, string>
+}
+
+interface IPageViewV2 {
+    url: string,
+    referer : string | null
 }
