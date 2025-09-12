@@ -1,4 +1,4 @@
-WEB_PACK_MODE = development
+WEB_PACK_MODE = production
 PORT = 5321
 CFLAGS = -c -g -D $(WEB_PACK_MODE) $(PORT)
 
